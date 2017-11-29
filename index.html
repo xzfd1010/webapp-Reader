@@ -525,6 +525,7 @@
                         // data.result是一个标志位，代表获取成功
                         // url地址，data的属性
                         var url = data.jsonp;
+                        console.log(url);
                         Util.getJSONP(url, function (data) {
 //                            debugger
 //                            //这里的callback是在调用getCurChapterContent时，传入的。是对UI层进行渲染的函数
