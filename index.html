@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="app">
+<html>
 <head>
     <meta charset="utf-8">
     <!--minimal-ui 让用户设备打开网页之后默认进入前面说到的全屏幕浏览状态-->
@@ -368,8 +368,11 @@
 <script src="js/jquery.jsonp.js"></script>
 
 <script>
+    // 实际的chaptertotal为4，只有4个data.json来模拟
+
+
     //大致搭建代码结构，代码尽量简洁
-    //    声明闭包，不会影响其他的代码
+    //    声明iife，不会影响其他的代码
     (function () {
         'use strict';  //声明后，才能使用es6的语法
 //        工具对象
@@ -398,9 +401,8 @@
 //                        断点，查看能否解析，通过控制台可以调试查看数据结构
 //                        debugger
                         //result是字符串的内容，利用插件解码
-                        var data = $.base64.decode(result);
-                        var json = decodeURIComponent(escape(data));
-                        callback(json);
+                        var data = $.base64.decode(result,true);
+                        callback(data);
                     }
                 })
             };
@@ -464,7 +466,7 @@
 //        数据层
         function ReaderModel() {
             //todo 实现和阅读器相关的数据交互的方法 ajax／jsonp
-            var chapter_id = parseInt(Util.StorageGetter('chapter_id'));
+            var chapter_id = parseInt(Util.StorageGetter('chapter_id')) || 1;
 
             var chapterTotal;
 //            初始化函数，参数是对UI层进行渲染的回调函数，在调用init时传入
@@ -480,7 +482,7 @@
                  */
 
                 getFictionInfoPromise().then(function (d) {
-                    return getCurChapterContentPromise();
+                    return getCurChapterContentPromise(d);
                 }).then(function (data) {
                     UIcallback && UIcallback(data);
                 });
@@ -508,7 +510,7 @@
                                 chapter_id = data.chapters[1].chapter_id;
                             }
                             chapterTotal = data.chapters.length;
-                            resolve();
+                            resolve(chapter_id);
                         } else {
                             reject();
                         }
@@ -516,7 +518,7 @@
                     }, 'json')
                 });
             };
-//            获取当前章节内容
+//            获取当前章节内容（回调的写法）
             var getCurChapterContent = function (chapter_id, callback) {
                 $.get('data/data' + chapter_id + '.json', function (data) {
                     if (data.result == 0) {
@@ -533,9 +535,9 @@
 
 //                将chapter_id存入localStorage
                 Util.StorageSetter('chapter_id', chapter_id);
-                console.log(chapter_id);
             };
-            var getCurChapterContentPromise = function () {
+            // promise的写法
+            var getCurChapterContentPromise = function (chapter_id) {
                 return new Promise(function (resolve, reject) {
                     $.get('data/data' + chapter_id + '.json', function (data) {
                         if (data.result == 0) {
@@ -558,11 +560,15 @@
 //            chapter_id是内部的全局变量，直接使用节课
             var prevChapter = function (UIcallback) {
                 chapter_id = parseInt(chapter_id, 10);
+
+                chapter_id -= 1;
                 if (chapter_id == 0) {
                     return;
                 }
-                chapter_id -= 1;
-                getCurChapterContent(chapter_id, UIcallback)
+//                getCurChapterContent(chapter_id, UIcallback)
+                getCurChapterContentPromise(chapter_id).then(function(data){
+                    UIcallback(data)
+                })
 
             };
             var nextChapter = function (UIcallback) {
@@ -571,7 +577,10 @@
                     return;
                 }
                 chapter_id += 1;
-                getCurChapterContent(chapter_id, UIcallback);
+//                getCurChapterContent(chapter_id, UIcallback);
+                getCurChapterContentPromise(chapter_id).then(function(data){
+                    UIcallback(data)
+                })
             };
 
             return {
